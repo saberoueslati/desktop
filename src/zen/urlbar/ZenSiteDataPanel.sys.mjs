@@ -48,7 +48,7 @@ export class nsZenSiteDataPanel {
   #init() {
     // Add a new button to the urlbar popup
     const button = this.window.MozXULElement.parseXULToFragment(`
-      <box id="zen-site-data-icon-button" role="button" align="center" class="identity-box-button" delegatesanchor="true">
+      <box id="zen-site-data-icon-button" role="button" align="center" class="identity-box-button" delegatesanchor="true" draggable="true">
         <image />
         <image class="zen-site-data-boost-animation" />
       </box>
@@ -83,6 +83,7 @@ export class nsZenSiteDataPanel {
       .getElementById("zen-site-data-settings-more")
       .addEventListener("click", this);
     this.anchor.addEventListener("click", this);
+    this.anchor.addEventListener("dragstart", this);
     const kCommandIDs = [
       "zen-site-data-header-share",
       "zen-site-data-header-bookmark",
@@ -156,6 +157,7 @@ export class nsZenSiteDataPanel {
             class="urlbar-page-action"
             role="button"
             data-l10n-id="zen-urlbar-copy-url-button"
+            draggable="true"
             disabled="true">
         <image class="urlbar-icon"/>
       </hbox>
@@ -169,6 +171,7 @@ export class nsZenSiteDataPanel {
       }
       this.document.getElementById("cmd_zenCopyCurrentURL").doCommand();
     });
+    aElement.addEventListener("dragstart", event => this.#onDragStart(event));
 
     this.window.gBrowser.addProgressListener({
       onLocationChange: (aWebProgress, aRequest, aLocation) => {
@@ -948,7 +951,25 @@ export class nsZenSiteDataPanel {
       case "popupshowing":
         this.#preparePanel();
         break;
+      case "dragstart":
+        this.#onDragStart(event);
+        break;
     }
+  }
+
+  /**
+   * Lets the user drag an address-bar icon onto the desktop or a folder to
+   * create a link shortcut (e.g. a `.url` file on Windows), restoring the
+   * native Firefox behaviour that Zen's custom urlbar icons replaced.
+   *
+   * Delegates to Firefox's `gIdentityHandler.onDragStart`, which builds the
+   * drag payload (text/x-moz-url, text/uri-list, text/plain, text/html plus a
+   * favicon/URL drag image) and no-ops unless the page proxy state is valid.
+   *
+   * @param {DragEvent} event - The dragstart event.
+   */
+  #onDragStart(event) {
+    this.window.gIdentityHandler?.onDragStart?.(event);
   }
 
   async #maybeShowFeatureCallout() {
